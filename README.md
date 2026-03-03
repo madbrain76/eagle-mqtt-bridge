@@ -119,7 +119,7 @@ Application settings:
 * `MQTT_PASS=password` - MQTT password if authentication is required.
 * `LOG_LEVEL=info` - Log level. Supported values: `error`, `warn`, `info`, `debug`.
 * `PUBLISH_HOME_ASSISTANT_MQTT=true` - Set to `false` to disable publishing Home Assistant MQTT discovery topics.
-* `EAGLE_POLL_INTERVAL_MS=15000` - Poll interval for the Eagle local API in milliseconds.
+* `EAGLE_POLL_INTERVAL_MS=30000` - Poll interval for the Eagle local API in milliseconds.
 * `AVAILABILITY_TIMEOUT_MS=300000` - Time without a successful poll before publishing `offline`.
 * `EAGLE_FAILURES_BEFORE_OFFLINE=20` - Consecutive poll failures required before the bridge will publish `offline`.
 

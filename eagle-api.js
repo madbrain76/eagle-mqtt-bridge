@@ -3,7 +3,7 @@ const http = require('http')
 const https = require('https')
 const logger = require('./logger.js')
 
-const DEFAULT_POLL_INTERVAL_MS = 15000
+const DEFAULT_POLL_INTERVAL_MS = 30000
 const DEFAULT_PATH = '/cgi-bin/post_manager'
 
 class EagleApiClient extends EventEmitter {
