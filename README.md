@@ -37,6 +37,52 @@ PUBLISH_HOME_ASSISTANT_MQTT=true \
 ./build-and-run.sh
 ```
 
+### systemd user service installer
+
+The repo also includes `./install-systemd-service.sh`, which:
+
+* writes a per-user environment file under `~/.config/systemd/user`
+* installs a `systemd --user` unit that runs `./build-and-run.sh`
+* enables automatic restart
+* enables the service for your user session
+
+Example:
+
+```bash
+MQTT_HOST=homeassistant.local \
+EAGLE_HOST=eagle-00abcd.local \
+EAGLE_USER=username \
+EAGLE_PASS=password \
+MQTT_USER=username \
+MQTT_PASS=password \
+PUBLISH_HOME_ASSISTANT_MQTT=true \
+./install-systemd-service.sh
+```
+
+For start-on-boot before login, your system must have user lingering enabled:
+
+```bash
+sudo loginctl enable-linger "$USER"
+```
+
+Without lingering, the service still auto-restarts, but only while your user `systemd` instance is running.
+
+Useful commands:
+
+```bash
+systemctl --user status eagle-mqtt-bridge.service
+journalctl --user -u eagle-mqtt-bridge.service -f
+systemctl --user restart eagle-mqtt-bridge.service
+```
+
+To uninstall the user service:
+
+```bash
+./uninstall-systemd-service.sh
+```
+
+That uninstall script also stops and removes the `eagle-mqtt` Docker container by default.
+
 ### Plain Docker
 
 ```bash
