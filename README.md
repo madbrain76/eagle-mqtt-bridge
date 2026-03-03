@@ -22,7 +22,15 @@ The examples use plain HTTP for the Eagle local API because TLS is effectively u
 
 ### Docker helper script
 
-The repo includes `./build-and-run.sh`, which rebuilds the image when local source files change and then starts the container.
+The repo includes `./build.sh`, which rebuilds the image when local source files change.
+
+Example:
+
+```bash
+./build.sh
+```
+
+The repo also includes `./run.sh`, which calls `./build.sh` as needed and then starts the container.
 
 Example:
 
@@ -34,7 +42,7 @@ EAGLE_PASS=password \
 MQTT_USER=username \
 MQTT_PASS=password \
 PUBLISH_HOME_ASSISTANT_MQTT=true \
-./build-and-run.sh
+./run.sh
 ```
 
 ### systemd user service installer
@@ -42,7 +50,8 @@ PUBLISH_HOME_ASSISTANT_MQTT=true \
 The repo also includes `./install-systemd-service.sh`, which:
 
 * writes a per-user environment file under `~/.config/systemd/user`
-* installs a `systemd --user` unit that runs `./build-and-run.sh`
+* builds the Docker image with `./build.sh`
+* installs a `systemd --user` unit that runs `./run.sh`
 * enables automatic restart
 * enables the service for your user session
 

@@ -5,7 +5,7 @@
   "main": "bridge.js",
   "scripts": {
     "start": "node bridge.js",
-    "test": "node test/mqtt-host.test.js && node test/eagle-api.test.js && node test/hadiscovery.test.js && node test/bridge-env.test.js"
+    "test": "node test/mqtt-host.test.js && node test/eagle-api.test.js && node test/hadiscovery.test.js && node test/bridge-env.test.js && node test/bridge-startup.test.js"
   },
   "repository": {
     "type": "git",

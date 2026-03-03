@@ -4,7 +4,8 @@ ARG SOURCE_HASH=unknown
 LABEL io.eagle-mqtt.source-hash=$SOURCE_HASH
 
 WORKDIR /app
-COPY *.js* ./
+COPY package.json package-lock.json ./
 RUN npm ci
+COPY *.js ./
 
 CMD [ "npm", "start" ]

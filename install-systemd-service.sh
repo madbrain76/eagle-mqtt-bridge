@@ -7,7 +7,8 @@ USER_SYSTEMD_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 SERVICE_FILE="${USER_SYSTEMD_DIR}/${SERVICE_NAME}.service"
 ENV_FILE="${USER_SYSTEMD_DIR}/${SERVICE_NAME}.env"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-RUN_SCRIPT="${REPO_DIR}/build-and-run.sh"
+BUILD_SCRIPT="${REPO_DIR}/build.sh"
+RUN_SCRIPT="${REPO_DIR}/run.sh"
 
 required_vars=(
   MQTT_HOST
@@ -26,6 +27,11 @@ optional_vars=(
   AVAILABILITY_TIMEOUT_MS
   EAGLE_FAILURES_BEFORE_OFFLINE
 )
+
+if [[ ! -x "${BUILD_SCRIPT}" ]]; then
+  echo "Expected executable build script at ${BUILD_SCRIPT}"
+  exit 1
+fi
 
 if [[ ! -x "${RUN_SCRIPT}" ]]; then
   echo "Expected executable run script at ${RUN_SCRIPT}"
@@ -93,6 +99,8 @@ EOF
 
 install -m 600 "${tmp_env}" "${ENV_FILE}"
 install -m 644 "${tmp_service}" "${SERVICE_FILE}"
+
+"${BUILD_SCRIPT}"
 
 systemctl --user daemon-reload
 systemctl --user enable --now "${SERVICE_NAME}.service"
