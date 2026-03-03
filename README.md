@@ -1,33 +1,92 @@
 # Rainforest Eagle to MQTT bridge
-![Docker Pulls](https://img.shields.io/docker/pulls/thevoltagesource/eagle-mqtt-bridge)<br>
-This application creates an HTTP listener to capture XML from the Rainforest Eagle, parse the XML, and publish select data to the specified MQTT host. This is available as a Docker container on [Docker Hub](https://hub.docker.com/repository/docker/thevoltagesource/eagle-mqtt-bridge).  
+This application supports the Rainforest Eagle 3 by connecting to its local API, polling meter values, and publishing that data through MQTT. That makes the meter data available both to Home Assistant and to other MQTT consumers, such as OpenEVSE. It is tested with Eagle 3 and should support Eagle-200 as well.  
 
-[Home Assistant](https://www.home-assistant.io) users can now skip the manual YAML config by enabling discovery!  This will create two devices under the MQTT integration. One for the bridge and one for the Eagle.
+[Home Assistant](https://www.home-assistant.io) users get MQTT discovery by default, so the Eagle sensors are created automatically.
 
-Settings are passed to the app through environment variables.
+## Purpose
 
-* **MQTT_HOST=ip.ad.re.ss - REQUIRED - IP of your MQTT broker.**
-* MQTT_TOPIC=eagle - Base MQTT topic for published messages, default is ```eagle```.
-* MQTT_USER=username - MQTT username if authentication is required.
-* MQTT_PASS=password - MQTT password if authentication is required.
-* LISTEN_PORT=3000 - HTTP Port the bridge will listen on, default is ```3000```.
-* LOG_LEVEL=info - Specify desired log level, default is ```info```.
-* SUMMATION_WATTS=false - Set to ```true``` for summation values in Watt Hours (Wh), default is ```false``` for Kilowatt Hours (kWh)
-* HA_DISCOVERY=false - Set to ```true``` to publish Home Assistant discovery messages.
+Rainforest Eagle devices expose useful utility meter data locally, but many other systems work better with MQTT than with the Eagle local API directly. This project bridges that gap by polling the Eagle and republishing the relevant values as stable MQTT topics that can be consumed by Home Assistant and other external systems.
 
-Device status is tracked (```online``` and ```offline```) on topic ```MQTT_TOPIC/availability```<br>
-Bridge status is tracked (```online``` and ```offline```) on topic```MQTT_TOPIC/bridge/status``` (retained)
+## How it works
 
-Current supported messages:<br>
-* Instantanious Demand (in Watts): ```MQTT_TOPIC/meter/demand```
-* Summation Delivered (rounded to neaest kWh or Wh): ```MQTT_TOPIC/meter/delivered```
-* Summation Received (rounded to nearest kWh or Wh): ```MQTT_TOPIC/meter/received```
-* Price / kWh (set by utility or manually entered): ```MQTT_TOPIC/pricing/price```
-* Price Tier : ```MQTT_TOPIC/pricing/tier```
-* Zigbee Status: ```MQTT_TOPIC/zigbee/status```
-* Zigbee Signal Strength: ```MQTT_TOPIC/zigbee/signal```
-* Zigbee Channel: ```MQTT_TOPIC/zigbee/channel```
+The bridge uses the Eagle local API directly:
 
-Please note the Meter Reading topic was dropped in favor of the Summation Delivered topic.
+1. `device_list` discovers the electric meter on the Eagle.
+2. `device_query` polls the meter through the Eagle local API.
+3. Selected values are published to MQTT under `MQTT_TOPIC`.
 
-Details of most Eagle messages are in the code and can be used to enable additional published data.
+There is no listener mode and no configuration on the Eagle to push data to this bridge.
+The examples use plain HTTP for the Eagle local API because TLS is effectively unusable by default on the Eagle due to its self-signed certificate.
+
+## Running the bridge
+
+### Docker helper script
+
+The repo includes `./build-and-run.sh`, which rebuilds the image when local source files change and then starts the container.
+
+Example:
+
+```bash
+MQTT_HOST=homeassistant.local \
+EAGLE_HOST=eagle-00abcd.local \
+EAGLE_USER=username \
+EAGLE_PASS=password \
+MQTT_USER=username \
+MQTT_PASS=password \
+PUBLISH_HOME_ASSISTANT_MQTT=true \
+./build-and-run.sh
+```
+
+### Plain Docker
+
+```bash
+docker run --name eagle-mqtt \
+  -e MQTT_HOST=homeassistant.local \
+  -e EAGLE_HOST=eagle-00abcd.local \
+  -e EAGLE_USER=username \
+  -e EAGLE_PASS=password \
+  -e MQTT_USER=username \
+  -e MQTT_PASS=password \
+  -e PUBLISH_HOME_ASSISTANT_MQTT=true \
+  eagle-mqtt
+```
+
+## Environment variables
+
+Application settings:
+
+* **MQTT_HOST=homeassistant.local - REQUIRED - Hostname or IP address of your MQTT broker.**
+* **EAGLE_HOST=eagle-00abcd.local - REQUIRED - Hostname, IP address, or full URL for the local Eagle API.**
+* **EAGLE_USER=username - REQUIRED - Eagle local API username.**
+* **EAGLE_PASS=password - REQUIRED - Eagle local API password.**
+* `MQTT_TOPIC=eagle` - Base MQTT topic for published messages.
+* `MQTT_USER=username` - MQTT username if authentication is required.
+* `MQTT_PASS=password` - MQTT password if authentication is required.
+* `LOG_LEVEL=info` - Log level. Supported values: `error`, `warn`, `info`, `debug`.
+* `PUBLISH_HOME_ASSISTANT_MQTT=true` - Set to `false` to disable publishing Home Assistant MQTT discovery topics.
+* `EAGLE_POLL_INTERVAL_MS=15000` - Poll interval for the Eagle local API in milliseconds.
+* `AVAILABILITY_TIMEOUT_MS=300000` - Time without a successful poll before publishing `offline`.
+* `EAGLE_FAILURES_BEFORE_OFFLINE=20` - Consecutive poll failures required before the bridge will publish `offline`.
+
+Sample setup:
+
+* `MQTT_HOST=homeassistant.local` assumes the Mosquitto broker add-on is running on the same Home Assistant host.
+
+## MQTT topics
+
+Availability:
+
+* `MQTT_TOPIC/availability` - Eagle availability (`online` / `offline`)
+* `MQTT_TOPIC/bridge/status` - Bridge process availability (`online` / `offline`, retained)
+
+Published meter values:
+
+* `Power Demand` in watts: `MQTT_TOPIC/meter/demand`
+* `Energy Imported from Grid` in kWh: `MQTT_TOPIC/meter/imported`
+* `Energy Exported to Grid` in kWh: `MQTT_TOPIC/meter/exported`
+
+Home Assistant discovery currently publishes only these three Eagle sensors:
+
+* `Power Demand`: `homeassistant/sensor/rfeagle_power_demand/config`
+* `Energy Imported from Grid`: `homeassistant/sensor/rfeagle_energy_imported_from_grid/config`
+* `Energy Exported to Grid`: `homeassistant/sensor/rfeagle_energy_exported_to_grid/config`

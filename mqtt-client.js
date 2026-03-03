@@ -52,7 +52,10 @@ class MqttClient {
   }
 
   sendMessage(topic, message, flag=false) {
-      this.client.publish(this.topic_base + '/' + topic, message.toString(), {retain: flag})
+      const fullTopic = this.topic_base + '/' + topic
+      const payload = message.toString()
+      logger.debug('Publishing MQTT message to ' + fullTopic + ': ' + payload)
+      this.client.publish(fullTopic, payload, {retain: flag})
   }
 
 }
