@@ -52,7 +52,6 @@ assert.doesNotThrow(() => {
     EAGLE_RETRY_BASE_DELAY_MS: '45000',
     EAGLE_RETRY_MAX_DELAY_MS: '180000',
     EAGLE_REQUEST_TIMEOUT_MS: '8000',
-    PUBLISH_HOME_ASSISTANT_MQTT: 'false',
   })
 })
 

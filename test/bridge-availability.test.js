@@ -53,7 +53,6 @@ const bridge = startBridge({
   EAGLE_HOST: 'eagle.local',
   EAGLE_USER: 'user',
   EAGLE_PASS: 'pass',
-  PUBLISH_HOME_ASSISTANT_MQTT: 'false',
 })
 
 const eagle = FakeEagleApiClient.instances[0]

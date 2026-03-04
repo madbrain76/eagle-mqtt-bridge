@@ -1,11 +1,9 @@
 const mqtt = require('mqtt')
 const logger = require('./logger.js')
-const hadiscovery = require('./hadiscovery.js')
 
 class MqttClient {
-  constructor(host, username, password, topic_base, discovery) {
+  constructor(host, username, password, topic_base) {
     this.client = null
-    this.discovery = discovery
     this.topic_base = topic_base
     this.host = 'mqtt://' + host
     if (username && password) {
@@ -18,9 +16,7 @@ class MqttClient {
   }
 
   connect() {
-    var connectOptions = {
-        will: {topic: this.topic_base + '/bridge/status', payload: 'offline', retain: true}
-    }
+    var connectOptions = {}
     if (this.username && this.password) {
       connectOptions.username = this.username
       connectOptions.password = this.password
@@ -36,14 +32,6 @@ class MqttClient {
     this.client.on('connect', () => {
       logger.info('MQTT client connected')
       logger.info('Publishing to topic base: ' + this.topic_base)
-      this.client.publish(this.topic_base + '/bridge/status', 'online', {retain: true})
-      if (this.discovery) {
-        logger.info('Publishing HA Discovery messages')
-        hadiscovery.buildDiscovery(this.topic_base)
-        for (var key in hadiscovery.messageset) {
-          this.client.publish(key, hadiscovery.messageset[key], {retain: true})
-        }
-      }
     })
 
     this.client.on('close', () => {

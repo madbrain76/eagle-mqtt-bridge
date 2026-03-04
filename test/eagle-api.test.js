@@ -103,7 +103,6 @@ assert.deepStrictEqual(mapped, {
   'meter/exported': 1.24,
   'pricing/price': 0.072,
   'pricing/tier': 'Tier 1',
-  'zigbee/status': 'Connected',
 })
 
 console.log('eagle-api parsing tests passed')

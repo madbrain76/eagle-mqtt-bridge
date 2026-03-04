@@ -18,7 +18,6 @@ function startBridge(environment = process.env) {
   const eagleRetryMaxDelayMs = parsePositiveInt(environment.EAGLE_RETRY_MAX_DELAY_MS, 60000)
   const eagleRequestTimeoutMs = parsePositiveInt(environment.EAGLE_REQUEST_TIMEOUT_MS, 10000)
   const eagleFailuresBeforeOffline = parsePositiveInt(environment.EAGLE_FAILURES_BEFORE_OFFLINE, 2)
-  const discovery = parseBooleanEnv(environment.PUBLISH_HOME_ASSISTANT_MQTT, true)
   const topicRegex = new RegExp('^((?![#+]).)+$')
 
   if (!topicRegex.test(environment.MQTT_TOPIC) && environment.MQTT_TOPIC) {
@@ -37,7 +36,7 @@ function startBridge(environment = process.env) {
     throw new Error('EAGLE_HOST, EAGLE_USER, and EAGLE_PASS are required.')
   }
 
-  const mqtt = new mqttclient(host, username, password, topicBase, discovery)
+  const mqtt = new mqttclient(host, username, password, topicBase)
   const eagle = new EagleApiClient(eagleHost, eagleUser, eaglePass, {
     pollIntervalMs: eaglePollIntervalMs,
     retryBaseDelayMs: eagleRetryBaseDelayMs,
@@ -150,14 +149,6 @@ function parsePositiveInt(rawValue, defaultValue) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultValue
 }
 
-function parseBooleanEnv(rawValue, defaultValue) {
-  if (rawValue === undefined) {
-    return defaultValue
-  }
-
-  return /^true$/i.test(rawValue)
-}
-
 if (require.main === module) {
   try {
     startBridge(process.env)
@@ -170,5 +161,4 @@ if (require.main === module) {
 module.exports = {
   startBridge,
   parsePositiveInt,
-  parseBooleanEnv,
 }

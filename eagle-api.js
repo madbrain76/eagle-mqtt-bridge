@@ -337,8 +337,6 @@ function mapDeviceQueryToMessage(device) {
   const message = {}
   const variables = flattenVariables(device)
   const details = device && device.DeviceDetails ? device.DeviceDetails : device
-  const connectionStatus = getValue(details, 'ConnectionStatus') || getValue(details, 'Status')
-
   setNumeric(message, 'meter/demand', parseDemandWatts(getValue(variables, 'zigbee:InstantaneousDemand')))
   setNumeric(message, 'meter/imported', parseSummationValue(getValue(variables, 'zigbee:CurrentSummationDelivered')))
   setNumeric(message, 'meter/exported', parseSummationValue(getValue(variables, 'zigbee:CurrentSummationReceived')))
@@ -350,10 +348,6 @@ function mapDeviceQueryToMessage(device) {
     || getValue(variables, 'zigbee:PriceRateLabel')
   if (tier) {
     message['pricing/tier'] = tier
-  }
-
-  if (connectionStatus) {
-    message['zigbee/status'] = connectionStatus
   }
 
   return message

@@ -1,7 +1,5 @@
 # Rainforest Eagle to MQTT bridge
-This application supports the Rainforest Eagle 3 by connecting to its local API, polling meter values, and publishing that data through MQTT. That makes the meter data available both to Home Assistant and to other MQTT consumers, such as OpenEVSE. It is tested with Eagle 3 and should support Eagle-200 as well.  
-
-[Home Assistant](https://www.home-assistant.io) users get MQTT discovery by default, so the Eagle sensors are created automatically.
+This application supports the Rainforest Eagle 3 by connecting to its local API, polling meter values, and publishing that data through MQTT. That makes the meter data available to MQTT consumers such as Home Assistant and OpenEVSE. It is tested with Eagle 3 and should support Eagle-200 as well.
 
 ## Purpose
 
@@ -41,7 +39,6 @@ EAGLE_USER=username \
 EAGLE_PASS=password \
 MQTT_USER=username \
 MQTT_PASS=password \
-PUBLISH_HOME_ASSISTANT_MQTT=true \
 ./run.sh
 ```
 
@@ -64,7 +61,6 @@ EAGLE_USER=username \
 EAGLE_PASS=password \
 MQTT_USER=username \
 MQTT_PASS=password \
-PUBLISH_HOME_ASSISTANT_MQTT=true \
 ./install-systemd-service.sh
 ```
 
@@ -102,7 +98,6 @@ docker run --name eagle-mqtt \
   -e EAGLE_PASS=password \
   -e MQTT_USER=username \
   -e MQTT_PASS=password \
-  -e PUBLISH_HOME_ASSISTANT_MQTT=true \
   eagle-mqtt
 ```
 
@@ -118,7 +113,6 @@ Application settings:
 * `MQTT_USER=username` - MQTT username if authentication is required.
 * `MQTT_PASS=password` - MQTT password if authentication is required.
 * `LOG_LEVEL=info` - Log level. Supported values: `error`, `warn`, `info`, `debug`.
-* `PUBLISH_HOME_ASSISTANT_MQTT=true` - Set to `false` to disable publishing Home Assistant MQTT discovery topics.
 * `EAGLE_POLL_INTERVAL_MS=30000` - Poll interval for the Eagle local API in milliseconds.
 * `EAGLE_RETRY_BASE_DELAY_MS=30000` - Compatibility setting. Failed polls continue at `EAGLE_POLL_INTERVAL_MS` until `EAGLE_FAILURES_BEFORE_OFFLINE` is reached.
 * `EAGLE_RETRY_MAX_DELAY_MS=60000` - Delay between Eagle retry attempts after the bridge has marked the Eagle unavailable.
@@ -135,16 +129,9 @@ Sample setup:
 Availability:
 
 * `MQTT_TOPIC/availability` - Eagle availability (`online` / `offline`)
-* `MQTT_TOPIC/bridge/status` - Bridge process availability (`online` / `offline`, retained)
 
 Published meter values:
 
 * `Power Demand` in watts: `MQTT_TOPIC/meter/demand`
 * `Energy Imported from Grid` in kWh: `MQTT_TOPIC/meter/imported`
 * `Energy Exported to Grid` in kWh: `MQTT_TOPIC/meter/exported`
-
-Home Assistant discovery currently publishes only these three Eagle sensors:
-
-* `Power Demand`: `homeassistant/sensor/rfeagle_power_demand/config`
-* `Energy Imported from Grid`: `homeassistant/sensor/rfeagle_energy_imported_from_grid/config`
-* `Energy Exported to Grid`: `homeassistant/sensor/rfeagle_energy_exported_to_grid/config`
