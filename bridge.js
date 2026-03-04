@@ -14,7 +14,10 @@ function startBridge(environment = process.env) {
   const eagleConfigured = Boolean(eagleHost && eagleUser && eaglePass)
   const availabilityTimeoutMs = parsePositiveInt(environment.AVAILABILITY_TIMEOUT_MS, 300000)
   const eaglePollIntervalMs = parsePositiveInt(environment.EAGLE_POLL_INTERVAL_MS, 30000)
-  const eagleFailuresBeforeOffline = parsePositiveInt(environment.EAGLE_FAILURES_BEFORE_OFFLINE, 20)
+  const eagleRetryBaseDelayMs = parsePositiveInt(environment.EAGLE_RETRY_BASE_DELAY_MS, eaglePollIntervalMs)
+  const eagleRetryMaxDelayMs = parsePositiveInt(environment.EAGLE_RETRY_MAX_DELAY_MS, 60000)
+  const eagleRequestTimeoutMs = parsePositiveInt(environment.EAGLE_REQUEST_TIMEOUT_MS, 10000)
+  const eagleFailuresBeforeOffline = parsePositiveInt(environment.EAGLE_FAILURES_BEFORE_OFFLINE, 2)
   const discovery = parseBooleanEnv(environment.PUBLISH_HOME_ASSISTANT_MQTT, true)
   const topicRegex = new RegExp('^((?![#+]).)+$')
 
@@ -37,6 +40,10 @@ function startBridge(environment = process.env) {
   const mqtt = new mqttclient(host, username, password, topicBase, discovery)
   const eagle = new EagleApiClient(eagleHost, eagleUser, eaglePass, {
     pollIntervalMs: eaglePollIntervalMs,
+    retryBaseDelayMs: eagleRetryBaseDelayMs,
+    retryMaxDelayMs: eagleRetryMaxDelayMs,
+    requestTimeoutMs: eagleRequestTimeoutMs,
+    backoffAfterFailures: eagleFailuresBeforeOffline,
   })
   let availabilityTimeout
   let lastSuccessfulPollAt = null
@@ -60,11 +67,25 @@ function startBridge(environment = process.env) {
     }
   }
 
+  function markEagleOffline(reason) {
+    if (!eagleAvailable) {
+      return
+    }
+
+    logger.warn(reason)
+    mqtt.sendMessage('availability', 'offline', true)
+    eagleAvailable = false
+  }
+
   function markEaglePollError() {
     consecutivePollErrors += 1
     logger.warn('Eagle poll error count: ' + consecutivePollErrors)
     if (consecutivePollErrors >= eagleFailuresBeforeOffline) {
-      checkAvailability()
+      markEagleOffline(
+        'Publishing Eagle offline after '
+        + consecutivePollErrors
+        + ' consecutive poll errors'
+      )
     }
   }
 
@@ -77,18 +98,12 @@ function startBridge(environment = process.env) {
       return
     }
 
-    if (eagleAvailable && consecutivePollErrors >= eagleFailuresBeforeOffline) {
-      logger.warn(
+    if (eagleAvailable) {
+      markEagleOffline(
         'Publishing Eagle offline after '
-        + consecutivePollErrors
-        + ' consecutive poll errors and '
         + availabilityTimeoutMs
         + 'ms without success'
       )
-      mqtt.sendMessage('availability', 'offline', true)
-      eagleAvailable = false
-    } else if (eagleAvailable) {
-      scheduleAvailabilityCheck()
     }
   }
 

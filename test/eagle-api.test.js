@@ -7,6 +7,8 @@ const {
   parseDemandWatts,
   parseSummationValue,
   parseCurrencyValue,
+  calculateRetryDelayMs,
+  getRetryDelayMs,
   parseXml,
   normalizeEndpoint,
 } = require('../eagle-api.js')
@@ -21,6 +23,27 @@ assert.strictEqual(parseSummationValue('1440 Wh'), 1.44)
 assert.strictEqual(parseCurrencyValue('0.072 $'), 0.072)
 assert.strictEqual(normalizeEndpoint('eagle.local').toString(), 'http://eagle.local/cgi-bin/post_manager')
 assert.strictEqual(normalizeEndpoint('https://eagle.local/custom').toString(), 'https://eagle.local/custom')
+assert.strictEqual(calculateRetryDelayMs(1, 5000, 60000), 5000)
+assert.strictEqual(calculateRetryDelayMs(2, 5000, 60000), 10000)
+assert.strictEqual(calculateRetryDelayMs(5, 5000, 60000), 60000)
+assert.strictEqual(getRetryDelayMs({
+  consecutiveFailures: 1,
+  pollIntervalMs: 30000,
+  backoffAfterFailures: 2,
+  retryMaxDelayMs: 60000,
+}), 30000)
+assert.strictEqual(getRetryDelayMs({
+  consecutiveFailures: 2,
+  pollIntervalMs: 30000,
+  backoffAfterFailures: 2,
+  retryMaxDelayMs: 60000,
+}), 60000)
+assert.strictEqual(getRetryDelayMs({
+  consecutiveFailures: 4,
+  pollIntervalMs: 30000,
+  backoffAfterFailures: 2,
+  retryMaxDelayMs: 60000,
+}), 60000)
 
 assert.deepStrictEqual(
   extractResponseEnvelope(parseXml('<Response><DeviceList><Device><DeviceType>Electric Meter</DeviceType></Device></DeviceList></Response>')),

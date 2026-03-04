@@ -4,6 +4,9 @@ const https = require('https')
 const logger = require('./logger.js')
 
 const DEFAULT_POLL_INTERVAL_MS = 30000
+const DEFAULT_RETRY_BASE_DELAY_MS = 30000
+const DEFAULT_RETRY_MAX_DELAY_MS = 60000
+const DEFAULT_REQUEST_TIMEOUT_MS = 10000
 const DEFAULT_PATH = '/cgi-bin/post_manager'
 
 class EagleApiClient extends EventEmitter {
@@ -14,9 +17,14 @@ class EagleApiClient extends EventEmitter {
     this.username = username
     this.password = password
     this.pollIntervalMs = options.pollIntervalMs || DEFAULT_POLL_INTERVAL_MS
+    this.retryBaseDelayMs = options.retryBaseDelayMs || DEFAULT_RETRY_BASE_DELAY_MS
+    this.retryMaxDelayMs = options.retryMaxDelayMs || DEFAULT_RETRY_MAX_DELAY_MS
+    this.requestTimeoutMs = options.requestTimeoutMs || DEFAULT_REQUEST_TIMEOUT_MS
+    this.backoffAfterFailures = options.backoffAfterFailures || 1
     this.meterMacId = null
     this.pollTimer = null
     this.stopped = false
+    this.consecutiveFailures = 0
   }
 
   start() {
@@ -33,14 +41,29 @@ class EagleApiClient extends EventEmitter {
   }
 
   async poll() {
+    let pollSucceeded = false
+
     try {
       await this.pollOnce()
+      pollSucceeded = true
+      this.consecutiveFailures = 0
     } catch (err) {
+      this.consecutiveFailures += 1
       logger.error('Eagle API poll failed: ' + err.message)
       this.emit('error', err)
     } finally {
       if (!this.stopped) {
-        this.pollTimer = setTimeout(() => this.poll(), this.pollIntervalMs)
+        const delayMs = pollSucceeded
+          ? this.pollIntervalMs
+          : getRetryDelayMs({
+              consecutiveFailures: this.consecutiveFailures,
+              pollIntervalMs: this.pollIntervalMs,
+              retryBaseDelayMs: this.retryBaseDelayMs,
+              retryMaxDelayMs: this.retryMaxDelayMs,
+              backoffAfterFailures: this.backoffAfterFailures,
+            })
+        logger.debug('Scheduling next Eagle poll in ' + delayMs + 'ms')
+        this.pollTimer = setTimeout(() => this.poll(), delayMs)
       }
     }
   }
@@ -95,6 +118,7 @@ class EagleApiClient extends EventEmitter {
 
     const transport = this.endpoint.protocol === 'https:' ? https : http
     const body = await new Promise((resolve, reject) => {
+      let settled = false
       const req = transport.request(requestOptions, (res) => {
         let data = ''
 
@@ -103,6 +127,10 @@ class EagleApiClient extends EventEmitter {
           data += chunk
         })
         res.on('end', () => {
+          if (settled) {
+            return
+          }
+          settled = true
           if (res.statusCode < 200 || res.statusCode >= 300) {
             reject(new Error('HTTP ' + res.statusCode + ' from Eagle API: ' + data.trim()))
             return
@@ -111,7 +139,16 @@ class EagleApiClient extends EventEmitter {
         })
       })
 
-      req.on('error', reject)
+      req.on('error', (err) => {
+        if (settled) {
+          return
+        }
+        settled = true
+        reject(err)
+      })
+      req.setTimeout(this.requestTimeoutMs, () => {
+        req.destroy(new Error('Eagle API request timed out after ' + this.requestTimeoutMs + 'ms'))
+      })
       req.write(commandXml)
       req.end()
     })
@@ -238,6 +275,27 @@ function normalizeEndpoint(host) {
   }
 
   return url
+}
+
+function calculateRetryDelayMs(failureCount, retryBaseDelayMs, retryMaxDelayMs) {
+  const exponent = Math.max(0, failureCount - 1)
+  const delayMs = retryBaseDelayMs * (2 ** exponent)
+  return Math.min(delayMs, retryMaxDelayMs)
+}
+
+function getRetryDelayMs(options) {
+  const {
+    consecutiveFailures,
+    pollIntervalMs,
+    backoffAfterFailures,
+    retryMaxDelayMs,
+  } = options
+
+  if (consecutiveFailures < backoffAfterFailures) {
+    return pollIntervalMs
+  }
+
+  return retryMaxDelayMs
 }
 
 function buildDeviceQueryCommand(meterMacId) {
@@ -418,3 +476,5 @@ module.exports.parseCurrencyValue = parseCurrencyValue
 module.exports.parseXml = parseXml
 module.exports.isElectricMeter = isElectricMeter
 module.exports.normalizeEndpoint = normalizeEndpoint
+module.exports.calculateRetryDelayMs = calculateRetryDelayMs
+module.exports.getRetryDelayMs = getRetryDelayMs

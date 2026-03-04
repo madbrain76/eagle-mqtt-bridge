@@ -120,8 +120,11 @@ Application settings:
 * `LOG_LEVEL=info` - Log level. Supported values: `error`, `warn`, `info`, `debug`.
 * `PUBLISH_HOME_ASSISTANT_MQTT=true` - Set to `false` to disable publishing Home Assistant MQTT discovery topics.
 * `EAGLE_POLL_INTERVAL_MS=30000` - Poll interval for the Eagle local API in milliseconds.
+* `EAGLE_RETRY_BASE_DELAY_MS=30000` - Compatibility setting. Failed polls continue at `EAGLE_POLL_INTERVAL_MS` until `EAGLE_FAILURES_BEFORE_OFFLINE` is reached.
+* `EAGLE_RETRY_MAX_DELAY_MS=60000` - Delay between Eagle retry attempts after the bridge has marked the Eagle unavailable.
+* `EAGLE_REQUEST_TIMEOUT_MS=10000` - Per-request timeout for Eagle API calls. Stuck requests are aborted and treated as poll failures.
 * `AVAILABILITY_TIMEOUT_MS=300000` - Time without a successful poll before publishing `offline`.
-* `EAGLE_FAILURES_BEFORE_OFFLINE=20` - Consecutive poll failures required before the bridge will publish `offline`.
+* `EAGLE_FAILURES_BEFORE_OFFLINE=2` - Consecutive poll failures required before the bridge will publish `offline`.
 
 Sample setup:
 
