@@ -336,7 +336,7 @@ function extractDevice(response) {
 function mapDeviceQueryToMessage(device) {
   const message = {}
   const variables = flattenVariables(device)
-  const details = device && device.DeviceDetails ? device.DeviceDetails : device
+
   setNumeric(message, 'meter/demand', parseDemandWatts(getValue(variables, 'zigbee:InstantaneousDemand')))
   setNumeric(message, 'meter/imported', parseSummationValue(getValue(variables, 'zigbee:CurrentSummationDelivered')))
   setNumeric(message, 'meter/exported', parseSummationValue(getValue(variables, 'zigbee:CurrentSummationReceived')))
